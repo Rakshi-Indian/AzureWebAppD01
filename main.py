@@ -11,8 +11,8 @@ app = FastAPI(
 security = HTTPBasic()
 
 # Get credentials from environment variables (default values for local testing)
-VALID_USERNAME = os.getenv("BASIC_AUTH_USERNAME", "admin")
-VALID_PASSWORD = os.getenv("BASIC_AUTH_PASSWORD", "password123")
+VALID_USERNAME = os.getenv("BASIC_AUTH_USERNAME", "admin1")
+VALID_PASSWORD = os.getenv("BASIC_AUTH_PASSWORD", "password23")
 
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
     """Authenticate user with Basic Auth"""

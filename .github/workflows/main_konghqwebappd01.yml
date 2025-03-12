@@ -43,3 +43,14 @@ jobs:
       run: |
         cd release  # Navigate into the release folder
         zip -r ../fastapi-app.zip *  # Zip contents directly without nesting
+        
+    - name: Create ZIP Package
+      run: |
+        cd release  # Navigate into the release folder
+        zip -r ../fastapi-app.zip *  # Zip contents directly without nesting 
+    
+    - name: Upload ZIP as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: fastapi-app-release
+        path: fastapi-app.zip

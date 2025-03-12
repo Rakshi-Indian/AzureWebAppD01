@@ -1,40 +1,27 @@
-import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from starlette.responses import JSONResponse
 
-app = FastAPI(
-    title="Azure WebApp with Swagger and Basic Authentication",
-    description="A FastAPI app deployed on Azure with Basic Authentication",
-    version="1.0"
-)
+app = FastAPI()
 
 security = HTTPBasic()
 
-# Get credentials from environment variables (default values for local testing)
-VALID_USERNAME = os.getenv("BASIC_AUTH_USERNAME", "admin1")
-VALID_PASSWORD = os.getenv("BASIC_AUTH_PASSWORD", "password23")
-
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
-    """Authenticate user with Basic Auth"""
-    if credentials.username != VALID_USERNAME or credentials.password != VALID_PASSWORD:
+    valid_username = "admin"
+    valid_password = "password"
+    
+    if credentials.username != valid_username or credentials.password != valid_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid credentials",
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username
 
-@app.get("/", dependencies=[Depends(authenticate)], tags=["Root"])
+@app.get("/")
 def read_root():
-    """Root endpoint - Requires authentication"""
-    return {"message": "Authenticated access granted!"}
+    return {"message": "Welcome to FastAPI on Azure Web App"}
 
-@app.get("/health", tags=["Health"])
-def health_check():
-    """Health check - No authentication required"""
-    return {"status": "Healthy"}
-
-# Run the application using Uvicorn (for local testing)
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.get("/secure-endpoint")
+def secure_endpoint(username: str = Depends(authenticate)):
+    return {"message": f"Hello, {username}. You have accessed a secure endpoint."}

@@ -24,9 +24,13 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-      
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+        
+      - name: Install Dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install fastapi uvicorn gunicorn
+          pip freeze > requirements.txt
 
       - name: Create `startup.sh` File
         run: |

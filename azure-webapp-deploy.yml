@@ -3,38 +3,39 @@ name: Deploy FastAPI to Azure Web App
 on:
   push:
     branches:
-      - main
+      - main  # Trigger on push to main branch
+
+env:
+  AZURE_WEBAPP_NAME: myFastAPIApp
+  AZURE_RESOURCE_GROUP: myResourceGroup
+  AZURE_PLAN_NAME: myAppServicePlan
+  PYTHON_VERSION: "3.9"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Install Dependencies
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install fastapi uvicorn gunicorn
+        pip freeze > requirements.txt
 
-      - name: Archive app for deployment
-        run: zip -r app.zip . -x '*.git*'
+    - name: Create Startup Script
+      run: |
+        echo "gunicorn -w 4 -k uvicorn.workers.UvicornWorker app:app" > startup.sh
+        chmod +x startup.sh
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_965E0BD11AA54C08ACC2504A53AF47A5 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_82B0A662BDB94368867B25C4F93578D6 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FA42D4910BED4D9780D213CB21B2CA33 }}
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: "kongHqWebAppD01"
-          package: app.zip
+    - name: Create ZIP Package
+      run: |
+        zip -r fastapi-app.zip * -x "venv/*"

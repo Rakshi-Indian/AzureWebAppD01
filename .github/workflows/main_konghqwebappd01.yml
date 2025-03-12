@@ -1,56 +1,81 @@
-name: Deploy FastAPI to Azure Web App
+name: Build and deploy Python app to Azure Web App - kongHqWebAppD01
 
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
-
-env:
-  AZURE_WEBAPP_NAME: myFastAPIApp
-  AZURE_RESOURCE_GROUP: myResourceGroup
-  AZURE_PLAN_NAME: myAppServicePlan
-  PYTHON_VERSION: "3.9"
+      - main
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
 
-    - name: Install Dependencies
-      run: |
-        python -m venv venv
-        source venv/bin/activate
-        pip install fastapi uvicorn gunicorn
-        pip freeze > requirements.txt
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Create `startup.sh` File
-      run: |
-        mkdir -p release  # Create the release folder if it doesn't exist
-        echo '#!/bin/bash' > release/startup.sh
-        echo 'source venv/bin/activate' >> release/startup.sh
-        echo 'gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind=0.0.0.0:8000' >> release/startup.sh
-        chmod +x release/startup.sh
-  
-    - name: Create ZIP Package
-      run: |
-        cd release  # Navigate into the release folder
-        zip -r ../fastapi-app.zip *  # Zip contents directly without nesting
-        
-    - name: Create ZIP Package
-      run: |
-        cd release  # Navigate into the release folder
-        zip -r ../fastapi-app.zip *  # Zip contents directly without nesting 
-    
-    - name: Upload ZIP as Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: fastapi-app-release
-        path: fastapi-app.zip
+      - name: Create `startup.sh` File
+        run: |
+          mkdir -p release  # Create release folder if it doesn't exist
+          echo '#!/bin/bash' > release/startup.sh
+          echo 'source venv/bin/activate' >> release/startup.sh
+          echo 'gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind=0.0.0.0:8000' >> release/startup.sh
+          chmod +x release/startup.sh
+
+      - name: Copy Project Files to Release Folder
+        run: |
+          cp -r ./* release/
+          rm -rf release/venv  # Exclude venv to reduce ZIP size
+
+      - name: Zip artifact for deployment
+        run: |
+          cd release
+          zip -r ../release.zip ./*
+
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: release.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+          path: .
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: kongHqWebAppD01
+          slot-name: 'Production'
+          package: release.zip
+
+      - name: Set Startup Command for Azure Web App
+        run: |
+          az webapp config set \
+            --resource-group myResourceGroup \
+            --name kongHqWebAppD01 \
+            --startup-file "startup.sh"

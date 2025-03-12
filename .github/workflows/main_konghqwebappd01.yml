@@ -38,7 +38,7 @@ jobs:
 
       - name: Copy Project Files to Release Folder
         run: |
-          cp -r ./* release/
+          find . -mindepth 1 -maxdepth 1 -not -name release -exec cp -r {} release/ \;
           rm -rf release/venv  # Exclude venv to reduce ZIP size
 
       - name: Zip artifact for deployment

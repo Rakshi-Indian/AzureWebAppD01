@@ -25,16 +25,3 @@ jobs:
 
       - name: Archive app for deployment
         run: zip -r app.zip . -x '*.git*'
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_965E0BD11AA54C08ACC2504A53AF47A5 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_82B0A662BDB94368867B25C4F93578D6 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FA42D4910BED4D9780D213CB21B2CA33 }}
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: "kongHqWebAppD01"
-          package: app.zip
